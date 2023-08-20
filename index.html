@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>目覚まし時計</title>
+  <style>
+    body {
+      background-image: url("https://www.wallpapertip.com/wmimgs/184-1849366_tokyo-city-view-and-sky-deck.jpg");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      position: relative;
+    }
+
+    h1, p, form, iframe, h2 {
+      margin: 10px;
+    }
+
+    h1, p, h2 {
+      font-family: "MS Mincho", serif;
+      font-weight: bold;
+    }
+
+    .center-content {
+      position: relative;
+      z-index: 1;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    form label {
+      color: white;
+    }
+
+    form input {
+      background-color: rgba(255, 255, 255, 0.5);
+      color: black;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      margin: 5px;
+    }
+
+    form button {
+      background-color: rgb(255, 255, 255);
+      color: black;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>時刻イベントアプリ</h1>
+  <div class="center-content">
+    <p id="message">指定の時刻になるとここにメッセージが表示されます</p>
+    <p id="currentTime">現在の時刻: <span id="currentHour"></span>時 <span id="currentMinute"></span>分 <span id="currentSecond"></span>秒</p>
+    <p id="targetTime">設定された時刻: <span id="targetHourDisplay">6</span>時 <span id="targetMinuteDisplay">15</span>分</p>
+    
+    <form id="timeForm">
+      <label for="hour">時</label>
+      <input type="number" id="hour" min="0" max="23" value="6">
+      <label for="minute">分</label>
+      <input type="number" id="minute" min="0" max="59" value="15">
+      <button type="button" id="setTimeButton">時刻を設定</button>
+    </form>
+
+    <div>
+      <label for="eventToggle">イベント実行</label>
+      <input type="checkbox" id="eventToggle" checked>
+    </div>
+
+    <!-- 音声ファイルを指定 -->
+    <audio id="notificationSound" src="notification.mp3" preload="auto"></audio>
+
+    <div id="quizContainer" style="display: none;">
+      <h2>計算問題</h2>
+      <p id="question"></p>
+      <input type="number" id="answer">
+      <button id="submitAnswer">回答する</button>
+    </div>
+  </div>
+
+  <script>
+    const messageDisplay = document.getElementById("message");
+    const notificationSound = document.getElementById("notificationSound");
+    const hourInput = document.getElementById("hour");
+    const minuteInput = document.getElementById("minute");
+    const setTimeButton = document.getElementById("setTimeButton");
+    const currentHourDisplay = document.getElementById("currentHour");
+    const currentMinuteDisplay = document.getElementById("currentMinute");
+    const currentSecondDisplay = document.getElementById("currentSecond");
+    const targetHourDisplay = document.getElementById("targetHourDisplay");
+    const targetMinuteDisplay = document.getElementById("targetMinuteDisplay");
+    const eventToggle = document.getElementById("eventToggle");
+    const quizContainer = document.getElementById("quizContainer");
+    const questionDisplay = document.getElementById("question");
+    const answerInput = document.getElementById("answer");
+    const submitAnswerButton = document.getElementById("submitAnswer");
+
+    let targetHour = 6; // 初期値
+    let targetMinute = 15; // 初期値
+    let isEventEnabled = true; // イベント実行フラグ
+    const questions = generateQuestions(1); // 1問の問題を生成
+    let currentQuestionIndex = 0;
+
+    function updateCurrentTimeDisplay() {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentSecond = now.getSeconds();
+      currentHourDisplay.textContent = currentHour;
+      currentMinuteDisplay.textContent = currentMinute;
+      currentSecondDisplay.textContent = currentSecond;
+    }
+
+    function updateTargetTimeDisplay() {
+      targetHourDisplay.textContent = targetHour;
+      targetMinuteDisplay.textContent = targetMinute;
+    }
+
+    function generateQuestions(count) {
+      const generatedQuestions = [];
+      for (let i = 0; i < count; i++) {
+        const num1 = Math.floor(Math.random() * 9) + 11; // 11から19までの数値を生成
+        const num2 = Math.floor(Math.random() * 9) + 11; // 11から19までの数値を生成
+        const operator = "×"; // 掛け算のみ
+        const answer = num1 * num2;
+        const question = `${num1} ${operator} ${num2} = ?`;
+        generatedQuestions.push({ question, answer });
+      }
+      return generatedQuestions;
+    }
+    function showNextQuestion() {
+  if (currentQuestionIndex < questions.length) {
+    const currentQuestion = questions[currentQuestionIndex];
+    questionDisplay.textContent = currentQuestion.question;
+
+    // 問題の出題中は音を繰り返し鳴らす
+    notificationSound.currentTime = 0;
+    notificationSound.play();
+  } else {
+    quizContainer.style.display = "none";
+    messageDisplay.textContent = "すべての問題に正解しました！";
+    notificationSound.pause();
+    notificationSound.currentTime = 0;
+  }
+}
+
+// 1秒ごとに問題の出題中に音を鳴らすかどうかをチェック
+setInterval(() => {
+  if (quizContainer.style.display === "block") {
+    showNextQuestion();
+  }
+}, 1000);
+
+
+
+    function checkTimeAndDisplayMessage() {
+      if (!isEventEnabled) {
+        messageDisplay.textContent = "イベント実行が無効です";
+        return;
+      }
+
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentSecond = now.getSeconds();
+
+      updateCurrentTimeDisplay();
+      updateTargetTimeDisplay();
+
+      if (currentHour === targetHour && currentMinute === targetMinute && currentSecond === 0) {
+        messageDisplay.textContent = "指定の時刻になりました！";
+
+        // イベント実行時の処理
+        quizContainer.style.display = "block";
+        currentQuestionIndex = 0;
+        showNextQuestion();
+      } else {
+        messageDisplay.textContent = "まだ指定の時刻ではありません";
+      }
+    }
+
+    setTimeButton.addEventListener("click", () => {
+      targetHour = parseInt(hourInput.value);
+      targetMinute = parseInt(minuteInput.value);
+      checkTimeAndDisplayMessage();
+    });
+
+    eventToggle.addEventListener("change", () => {
+      isEventEnabled = eventToggle.checked;
+      checkTimeAndDisplayMessage();
+    });
+
+    submitAnswerButton.addEventListener("click", () => {
+      const currentQuestion = questions[currentQuestionIndex];
+      const userAnswer = parseInt(answerInput.value);
+
+      if (userAnswer === currentQuestion.answer) {
+        currentQuestionIndex++;
+        showNextQuestion();
+      } else {
+        messageDisplay.textContent = "不正解です。もう一度挑戦してみてください。";
+        notificationSound.play(); // 不正解時も音を再生
+      }
+
+      answerInput.value = ""; // 回答欄をクリア
+    });
+
+    // 初期表示
+    updateCurrentTimeDisplay();
+    updateTargetTimeDisplay();
+    checkTimeAndDisplayMessage();
+
+    // 1秒ごとに時刻をチェックする
+    setInterval(checkTimeAndDisplayMessage, 1000);
+  </script>
+</body>
+</html>
